@@ -12,22 +12,28 @@ function loadMateri() {
   fetch(WEB_APP_URL + "?action=getMateri")
     .then(res => res.json())
     .then(data => {
+
       const select = document.getElementById("namaMateri");
       if (!select) return;
 
       select.innerHTML = '<option value="">Pilih Materi</option>';
+
       data.forEach(materi => {
         const option = document.createElement("option");
+        option.value = materi;
         option.textContent = materi;
         select.appendChild(option);
       });
+
     })
     .catch(err => console.log("Materi error:", err));
 }
+
 loadMateri();
 
+
 /* =========================
-   AUTO READ MASTER
+   AUTO READ MASTER KARYAWAN
 ========================= */
 
 const nipInput = document.getElementById("nip");
@@ -42,20 +48,20 @@ if (nipInput) {
       .then(res => res.json())
       .then(data => {
 
-        const nama = document.getElementById("nama");
-        const sub = document.getElementById("subDivisi");
-        const dep = document.getElementById("departemen");
+        const namaInput = document.getElementById("nama");
+        const subInput  = document.getElementById("subDivisi");
+        const depInput  = document.getElementById("departemen");
 
-        if (!nama || !sub || !dep) return;
+        if (!namaInput || !subInput || !depInput) return;
 
         if (data.status === "success") {
-          nama.value = data.nama || "";
-          sub.value = data.subDivisi || "";
-          dep.value = data.departemen || "";
+          namaInput.value = data.nama || "";
+          subInput.value  = data.subDivisi || "";
+          depInput.value  = data.departemen || "";
         } else {
-          nama.value = "";
-          sub.value = "";
-          dep.value = "";
+          namaInput.value = "";
+          subInput.value  = "";
+          depInput.value  = "";
         }
 
       })
@@ -64,13 +70,71 @@ if (nipInput) {
   });
 }
 
+
 /* =========================
-   SUBMIT
+   SIGNATURE PAD
+========================= */
+
+const canvas = document.getElementById("signaturePad");
+
+let signatureData = "";
+
+if (canvas) {
+
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  canvas.addEventListener("mousedown", () => {
+    drawing = true;
+    ctx.beginPath();
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    drawing = false;
+  });
+
+  canvas.addEventListener("mousemove", draw);
+
+  canvas.addEventListener("touchstart", () => {
+    drawing = true;
+    ctx.beginPath();
+  });
+
+  canvas.addEventListener("touchend", () => {
+    drawing = false;
+  });
+
+  canvas.addEventListener("touchmove", draw);
+
+  function draw(e) {
+    if (!drawing) return;
+
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+
+  window.clearSignature = function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+}
+
+
+/* =========================
+   SUBMIT FORM
 ========================= */
 
 const form = document.getElementById("attendanceForm");
 
 if (form) {
+
   form.addEventListener("submit", function(e){
 
     e.preventDefault();
@@ -90,34 +154,48 @@ if (form) {
     formData.append("namaMateri", document.getElementById("namaMateri")?.value || "");
     formData.append("tanggal", document.getElementById("tanggal")?.value || "");
 
-    fetch(WEB_APP_URL, { method: "POST", body: formData })
-      .then(res => res.json())
-      .then(response => {
+    if (canvas) {
+      formData.append("signature", canvas.toDataURL());
+    }
 
-        if (loading) loading.classList.add("hidden");
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: formData
+    })
+    .then(res => res.json())
+    .then(response => {
 
-        if (response.status === "success") {
+      if (loading) loading.classList.add("hidden");
 
-          const toast = document.getElementById("toast");
-          if (toast) {
-            toast.classList.remove("hidden");
-            setTimeout(() => toast.classList.add("hidden"), 3000);
-          }
+      if (response.status === "success") {
 
-          form.reset();
+        const toast = document.getElementById("toast");
 
-        } else {
-          alert("Gagal menyimpan: " + response.message);
+        if (toast) {
+          toast.classList.remove("hidden");
+          setTimeout(() => toast.classList.add("hidden"), 3000);
         }
 
-      })
-      .catch(err => {
-        if (loading) loading.classList.add("hidden");
-        console.log(err);
-        alert("Terjadi kesalahan koneksi");
-      });
+        form.reset();
+
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+      } else {
+        alert("Gagal menyimpan: " + response.message);
+      }
+
+    })
+    .catch(err => {
+      if (loading) loading.classList.add("hidden");
+      console.log(err);
+      alert("Terjadi kesalahan koneksi");
+    });
 
   });
+
 }
 
 });

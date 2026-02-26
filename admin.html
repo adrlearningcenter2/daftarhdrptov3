@@ -1,0 +1,120 @@
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHDBoFZMjfG4DbfdKGJpXY0DKSmZUKtGJV_bbVMMmzB-Le-3HaFL79MgCM-sFvf0Kb/exec";
+
+/* =========================
+   LOGIN
+========================= */
+
+window.login = function () {
+
+  const idField = document.getElementById("adminId");
+  const pwField = document.getElementById("adminPw");
+
+  if (!idField || !pwField) return;
+
+  const id = idField.value;
+  const pw = pwField.value;
+
+  if (id === "ADRLC" && pw === "Adrlc123") {
+
+    document.getElementById("loginPage")?.classList.add("hidden");
+    document.getElementById("dashboard")?.classList.remove("hidden");
+
+    loadData();
+
+  } else {
+    alert("Login salah");
+  }
+};
+
+window.logout = function () {
+  document.getElementById("dashboard")?.classList.add("hidden");
+  document.getElementById("loginPage")?.classList.remove("hidden");
+};
+
+/* =========================
+   LOAD DATA ABSENSI
+========================= */
+
+function loadData() {
+
+  fetch(WEB_APP_URL + "?action=getAbsensi")
+    .then(res => res.json())
+    .then(data => {
+
+      const table = document.getElementById("dataTable");
+      if (!table) return;
+
+      table.innerHTML = "";
+
+      if (!data || data.length <= 1) {
+        table.innerHTML = `<tr><td colspan="9" class="p-4 text-center">Belum ada data</td></tr>`;
+        return;
+      }
+
+      data.slice(1).forEach(row => {
+
+        const tr = document.createElement("tr");
+        tr.className = "border-b";
+
+        tr.innerHTML = `
+          <td class="p-2">${row[9] || ""}</td>
+          <td class="p-2">${row[1] || ""}</td>
+          <td class="p-2">${row[2] || ""}</td>
+          <td class="p-2">${row[3] || ""}</td>
+          <td class="p-2">${row[4] || ""}</td>
+          <td class="p-2">${row[5] || ""}</td>
+          <td class="p-2">${row[6] || ""}</td>
+          <td class="p-2">${row[8] || ""}</td>
+          <td class="p-2">${row[7] || ""}</td>
+        `;
+
+        table.appendChild(tr);
+      });
+
+    })
+    .catch(err => {
+      console.log("Load error:", err);
+      alert("Gagal mengambil data dari server");
+    });
+}
+
+/* =========================
+   TAMBAH MATERI
+========================= */
+
+window.tambahMateri = function () {
+
+  const materiInput = document.getElementById("materiBaru");
+  if (!materiInput) return;
+
+  const materi = materiInput.value.trim();
+
+  if (!materi) {
+    alert("Materi tidak boleh kosong");
+    return;
+  }
+
+  fetch(WEB_APP_URL + "?action=addMateri&materi=" + encodeURIComponent(materi))
+    .then(res => res.text())
+    .then(response => {
+
+      if (response === "OK") {
+        alert("Materi berhasil ditambahkan");
+        materiInput.value = "";
+      } else {
+        alert("Gagal menambahkan materi");
+      }
+
+    })
+    .catch(err => {
+      console.log("Materi error:", err);
+      alert("Terjadi kesalahan");
+    });
+};
+
+});
+</script>

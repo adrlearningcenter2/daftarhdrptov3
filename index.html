@@ -1,0 +1,182 @@
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHDBoFZMjfG4DbfdKGJpXY0DKSmZUKtGJV_bbVMMmzB-Le-3HaFL79MgCM-sFvf0Kb/exec";
+
+/* =========================
+   LOAD MATERI
+========================= */
+
+function loadMateri() {
+  fetch(WEB_APP_URL + "?action=getMateri")
+    .then(res => res.json())
+    .then(data => {
+      const select = document.getElementById("namaMateri");
+      if (!select) return;
+
+      select.innerHTML = '<option value="">Pilih Materi</option>';
+
+      data.forEach(materi => {
+        const option = document.createElement("option");
+        option.value = materi;
+        option.textContent = materi;
+        select.appendChild(option);
+      });
+    })
+    .catch(err => console.log("Materi error:", err));
+}
+
+loadMateri();
+
+/* =========================
+   AUTO READ MASTER KARYAWAN
+========================= */
+
+const nipInput = document.getElementById("nip");
+
+if (nipInput) {
+  nipInput.addEventListener("blur", function () {
+
+    const nipValue = this.value.trim();
+    if (!nipValue) return;
+
+    fetch(WEB_APP_URL + "?action=getKaryawan&nip=" + encodeURIComponent(nipValue))
+      .then(res => res.json())
+      .then(data => {
+
+        const namaField = document.getElementById("nama");
+        const subDivisiField = document.getElementById("subDivisi");
+        const departemenField = document.getElementById("departemen");
+
+        if (!namaField || !subDivisiField || !departemenField) return;
+
+        if (data.status === "success") {
+          namaField.value = data.nama || "";
+          subDivisiField.value = data.subDivisi || "";
+          departemenField.value = data.departemen || "";
+        } else {
+          namaField.value = "";
+          subDivisiField.value = "";
+          departemenField.value = "";
+        }
+
+      })
+      .catch(err => console.log("Lookup error:", err));
+  });
+}
+
+/* =========================
+   SIGNATURE
+========================= */
+
+const canvas = document.getElementById("signaturePad");
+
+if (canvas) {
+
+  const ctx = canvas.getContext("2d");
+  let drawing = false;
+
+  canvas.addEventListener("mousedown", startDraw);
+  canvas.addEventListener("mouseup", stopDraw);
+  canvas.addEventListener("mousemove", draw);
+
+  canvas.addEventListener("touchstart", startDraw);
+  canvas.addEventListener("touchend", stopDraw);
+  canvas.addEventListener("touchmove", draw);
+
+  function startDraw(e) {
+    drawing = true;
+    ctx.beginPath();
+  }
+
+  function stopDraw() {
+    drawing = false;
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+
+    e.preventDefault();
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+
+  window.clearSignature = function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+}
+
+/* =========================
+   SUBMIT
+========================= */
+
+const form = document.getElementById("attendanceForm");
+
+if (form) {
+  form.addEventListener("submit", function (e) {
+
+    e.preventDefault();
+
+    const loading = document.getElementById("loading");
+    if (loading) loading.classList.remove("hidden");
+
+    const formData = new URLSearchParams();
+
+    formData.append("nip", document.getElementById("nip")?.value || "");
+    formData.append("nama", document.getElementById("nama")?.value || "");
+    formData.append("subDivisi", document.getElementById("subDivisi")?.value || "");
+    formData.append("departemen", document.getElementById("departemen")?.value || "");
+    formData.append("jenisPelatihan", document.getElementById("jenisPelatihan")?.value || "");
+    formData.append("batchPTO", document.getElementById("batchPTO")?.value || "");
+    formData.append("kehadiran", document.getElementById("kehadiran")?.value || "");
+    formData.append("namaMateri", document.getElementById("namaMateri")?.value || "");
+    formData.append("tanggal", document.getElementById("tanggal")?.value || "");
+
+    if (canvas) {
+      formData.append("signature", canvas.toDataURL());
+    }
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: formData
+    })
+    .then(res => res.json())
+    .then(response => {
+
+      if (loading) loading.classList.add("hidden");
+
+      if (response.status === "success") {
+
+        const toast = document.getElementById("toast");
+        if (toast) {
+          toast.classList.remove("hidden");
+          setTimeout(() => toast.classList.add("hidden"), 3000);
+        }
+
+        form.reset();
+        if (canvas) canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+
+      } else {
+        alert("Gagal menyimpan: " + response.message);
+      }
+
+    })
+    .catch(err => {
+      if (loading) loading.classList.add("hidden");
+      alert("Terjadi kesalahan koneksi.");
+      console.log(err);
+    });
+
+  });
+}
+
+});
+</script>

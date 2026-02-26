@@ -1,202 +1,166 @@
-<script>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daftar Hadir Training PTO</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-document.addEventListener("DOMContentLoaded", function () {
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHDBoFZMjfG4DbfdKGJpXY0DKSmZUKtGJV_bbVMMmzB-Le-3HaFL79MgCM-sFvf0Kb/exec";
+<div class="bg-white w-full max-w-xl p-8 rounded-2xl shadow-xl">
 
-/* =========================
+<h2 class="text-2xl font-bold mb-6 text-gray-700 text-center">
+Form Absensi PTO
+</h2>
+
+<form id="attendanceForm" class="space-y-4">
+
+<input id="nip" type="text" placeholder="NIP"
+class="w-full border p-3 rounded-xl focus:ring-2 focus:ring-indigo-500" required>
+
+<input id="nama" type="text" placeholder="Nama"
+class="w-full border p-3 rounded-xl">
+
+<input id="subDivisi" type="text" placeholder="Sub Divisi"
+class="w-full border p-3 rounded-xl">
+
+<input id="departemen" type="text" placeholder="Departemen"
+class="w-full border p-3 rounded-xl">
+
+<select id="jenisPelatihan"
+class="w-full border p-3 rounded-xl" required>
+<option value="">Pilih Program</option>
+<option value="BASIC">BASIC</option>
+<option value="MULTISKILL">MULTISKILL</option>
+</select>
+
+<input id="batchPTO" type="text" placeholder="Batch PTO"
+class="w-full border p-3 rounded-xl" required>
+
+<select id="kehadiran"
+class="w-full border p-3 rounded-xl" required>
+<option value="">Pilih Kehadiran</option>
+<option>Hadir</option>
+<option>Sakit</option>
+<option>Tidak Hadir</option>
+</select>
+
+<select id="namaMateri"
+class="w-full border p-3 rounded-xl" required>
+<option value="">Pilih Materi</option>
+</select>
+
+<input id="tanggal" type="date"
+class="w-full border p-3 rounded-xl" required>
+
+<button type="submit"
+class="w-full bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700">
+Submit
+</button>
+
+</form>
+
+<div id="status" class="mt-4 text-center text-sm"></div>
+
+</div>
+
+<script src="app.js">
+  document.addEventListener("DOMContentLoaded", () => {
+
+const WEB_APP_URL = "PASTE_WEB_APP_URL_DI_SINI";
+
+/* ========================
    LOAD MATERI
-========================= */
+======================== */
 
-function loadMateri() {
-  fetch(WEB_APP_URL + "?action=getMateri")
+fetch(WEB_APP_URL + "?action=getMateri")
+  .then(res => res.json())
+  .then(data => {
+    const select = document.getElementById("namaMateri");
+    if (!select) return;
+
+    data.forEach(materi => {
+      const option = document.createElement("option");
+      option.value = materi;
+      option.textContent = materi;
+      select.appendChild(option);
+    });
+  })
+  .catch(err => console.log(err));
+
+/* ========================
+   AUTO READ NIP
+======================== */
+
+document.getElementById("nip").addEventListener("blur", function(){
+
+  const nip = this.value.trim();
+  if (!nip) return;
+
+  fetch(WEB_APP_URL + "?action=getKaryawan&nip=" + encodeURIComponent(nip))
     .then(res => res.json())
     .then(data => {
 
-      const select = document.getElementById("namaMateri");
-      if (!select) return;
-
-      select.innerHTML = '<option value="">Pilih Materi</option>';
-
-      data.forEach(materi => {
-        const option = document.createElement("option");
-        option.value = materi;
-        option.textContent = materi;
-        select.appendChild(option);
-      });
-
-    })
-    .catch(err => console.log("Materi error:", err));
-}
-
-loadMateri();
-
-
-/* =========================
-   AUTO READ MASTER KARYAWAN
-========================= */
-
-const nipInput = document.getElementById("nip");
-
-if (nipInput) {
-  nipInput.addEventListener("blur", function () {
-
-    const nipValue = this.value.trim();
-    if (!nipValue) return;
-
-    fetch(WEB_APP_URL + "?action=getKaryawan&nip=" + encodeURIComponent(nipValue))
-      .then(res => res.json())
-      .then(data => {
-
-        const namaInput = document.getElementById("nama");
-        const subInput  = document.getElementById("subDivisi");
-        const depInput  = document.getElementById("departemen");
-
-        if (!namaInput || !subInput || !depInput) return;
-
-        if (data.status === "success") {
-          namaInput.value = data.nama || "";
-          subInput.value  = data.subDivisi || "";
-          depInput.value  = data.departemen || "";
-        } else {
-          namaInput.value = "";
-          subInput.value  = "";
-          depInput.value  = "";
-        }
-
-      })
-      .catch(err => console.log("Lookup error:", err));
-
-  });
-}
-
-
-/* =========================
-   SIGNATURE PAD
-========================= */
-
-const canvas = document.getElementById("signaturePad");
-
-let signatureData = "";
-
-if (canvas) {
-
-  const ctx = canvas.getContext("2d");
-  let drawing = false;
-
-  canvas.addEventListener("mousedown", () => {
-    drawing = true;
-    ctx.beginPath();
-  });
-
-  canvas.addEventListener("mouseup", () => {
-    drawing = false;
-  });
-
-  canvas.addEventListener("mousemove", draw);
-
-  canvas.addEventListener("touchstart", () => {
-    drawing = true;
-    ctx.beginPath();
-  });
-
-  canvas.addEventListener("touchend", () => {
-    drawing = false;
-  });
-
-  canvas.addEventListener("touchmove", draw);
-
-  function draw(e) {
-    if (!drawing) return;
-
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  }
-
-  window.clearSignature = function () {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
-}
-
-
-/* =========================
-   SUBMIT FORM
-========================= */
-
-const form = document.getElementById("attendanceForm");
-
-if (form) {
-
-  form.addEventListener("submit", function(e){
-
-    e.preventDefault();
-
-    const loading = document.getElementById("loading");
-    if (loading) loading.classList.remove("hidden");
-
-    const formData = new URLSearchParams();
-
-    formData.append("nip", document.getElementById("nip")?.value || "");
-    formData.append("nama", document.getElementById("nama")?.value || "");
-    formData.append("subDivisi", document.getElementById("subDivisi")?.value || "");
-    formData.append("departemen", document.getElementById("departemen")?.value || "");
-    formData.append("jenisPelatihan", document.getElementById("jenisPelatihan")?.value || "");
-    formData.append("batchPTO", document.getElementById("batchPTO")?.value || "");
-    formData.append("kehadiran", document.getElementById("kehadiran")?.value || "");
-    formData.append("namaMateri", document.getElementById("namaMateri")?.value || "");
-    formData.append("tanggal", document.getElementById("tanggal")?.value || "");
-
-    if (canvas) {
-      formData.append("signature", canvas.toDataURL());
-    }
-
-    fetch(WEB_APP_URL, {
-      method: "POST",
-      body: formData
-    })
-    .then(res => res.json())
-    .then(response => {
-
-      if (loading) loading.classList.add("hidden");
-
-      if (response.status === "success") {
-
-        const toast = document.getElementById("toast");
-
-        if (toast) {
-          toast.classList.remove("hidden");
-          setTimeout(() => toast.classList.add("hidden"), 3000);
-        }
-
-        form.reset();
-
-        if (canvas) {
-          const ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-      } else {
-        alert("Gagal menyimpan: " + response.message);
+      if (data.status === "success") {
+        document.getElementById("nama").value = data.nama || "";
+        document.getElementById("subDivisi").value = data.subDivisi || "";
+        document.getElementById("departemen").value = data.departemen || "";
       }
 
     })
-    .catch(err => {
-      if (loading) loading.classList.add("hidden");
-      console.log(err);
-      alert("Terjadi kesalahan koneksi");
-    });
+    .catch(err => console.log(err));
 
+});
+
+/* ========================
+   SUBMIT
+======================== */
+
+document.getElementById("attendanceForm").addEventListener("submit", function(e){
+
+  e.preventDefault();
+
+  const status = document.getElementById("status");
+  status.innerText = "Menyimpan...";
+
+  const formData = new URLSearchParams();
+
+  formData.append("nip", document.getElementById("nip").value);
+  formData.append("nama", document.getElementById("nama").value);
+  formData.append("subDivisi", document.getElementById("subDivisi").value);
+  formData.append("departemen", document.getElementById("departemen").value);
+  formData.append("jenisPelatihan", document.getElementById("jenisPelatihan").value);
+  formData.append("batchPTO", document.getElementById("batchPTO").value);
+  formData.append("kehadiran", document.getElementById("kehadiran").value);
+  formData.append("namaMateri", document.getElementById("namaMateri").value);
+  formData.append("tanggal", document.getElementById("tanggal").value);
+
+  fetch(WEB_APP_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(response => {
+
+    if (response.status === "success") {
+      status.innerText = "Berhasil disimpan";
+      this.reset();
+    } else {
+      status.innerText = "Gagal menyimpan";
+    }
+
+  })
+  .catch(err => {
+    status.innerText = "Terjadi kesalahan koneksi";
+    console.log(err);
   });
 
-}
+});
 
 });
 </script>
+
+</body>
+</html>

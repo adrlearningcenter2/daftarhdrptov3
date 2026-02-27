@@ -20,6 +20,11 @@
 <input type="text" id="nip" placeholder="NIP"
 class="w-full border p-3 rounded-xl" required>
 
+<!-- LOADING LOOKUP -->
+<div id="nipLoading" class="text-sm text-indigo-600 hidden">
+Mencari data karyawan...
+</div>
+
 <input type="text" id="nama" placeholder="Nama"
 class="w-full border p-3 rounded-xl" required>
 
@@ -74,6 +79,14 @@ Submit
 </div>
 </div>
 
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay"
+class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center">
+<div class="bg-white px-6 py-4 rounded-xl shadow-lg">
+Memproses...
+</div>
+</div>
+
 <script>
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfHpLuotloCY_OFJKAJ2NSB_gTKjVZCia1Sovq1kd-OjXeMoaWcrypUWifhdpf5alX/exec";
@@ -99,7 +112,7 @@ select.appendChild(opt);
 loadMateri();
 
 /* =========================
-   AUTO READ MASTER
+   AUTO READ MASTER + LOADING
 ========================= */
 
 document.getElementById("nip").addEventListener("blur",function(){
@@ -107,9 +120,13 @@ document.getElementById("nip").addEventListener("blur",function(){
 const nip=this.value.trim();
 if(!nip) return;
 
+document.getElementById("nipLoading").classList.remove("hidden");
+
 fetch(WEB_APP_URL + "?action=getKaryawan&nip="+encodeURIComponent(nip))
 .then(res=>res.json())
 .then(data=>{
+
+document.getElementById("nipLoading").classList.add("hidden");
 
 if(data.status==="success"){
 document.getElementById("nama").value=data.nama||"";
@@ -120,7 +137,11 @@ document.getElementById("subDivisi").value="";
 document.getElementById("departemen").value="";
 }
 
+})
+.catch(()=>{
+document.getElementById("nipLoading").classList.add("hidden");
 });
+
 });
 
 /* =========================
@@ -156,7 +177,7 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 
 /* =========================
-   SUBMIT
+   SUBMIT + LOADING OVERLAY
 ========================= */
 
 document.getElementById("attendanceForm")
@@ -168,6 +189,8 @@ if(canvas.toDataURL().length<200){
 alert("Tanda tangan wajib diisi");
 return;
 }
+
+document.getElementById("loadingOverlay").classList.remove("hidden");
 
 const formData=new URLSearchParams();
 
@@ -185,6 +208,9 @@ formData.append("signature",canvas.toDataURL());
 fetch(WEB_APP_URL,{method:"POST",body:formData})
 .then(res=>res.json())
 .then(r=>{
+
+document.getElementById("loadingOverlay").classList.add("hidden");
+
 if(r.status==="success"){
 alert("Berhasil disimpan");
 attendanceForm.reset();
@@ -192,6 +218,11 @@ clearSignature();
 }else{
 alert(r.message);
 }
+
+})
+.catch(()=>{
+document.getElementById("loadingOverlay").classList.add("hidden");
+alert("Terjadi kesalahan koneksi");
 });
 
 });
@@ -199,4 +230,3 @@ alert(r.message);
 </script>
 </body>
 </html>
-combinasikan dengan html saya

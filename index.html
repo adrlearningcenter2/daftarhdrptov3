@@ -11,7 +11,7 @@
   <!-- HEADER -->
 <div class="bg-indigo-600 text-white py-4 shadow-md">
   <div class="max-w-3xl mx-auto px-6 flex justify-between items-center">
-    <h1 class="text-lg font-semibold">Absensi Training PTO</h1>
+    <h1 class="text-lg font-semibold">Absensi Training Otomasi</h1>
     <a href="admin.html"
        class="text-sm underline hover:text-gray-200 transition">
        Admin
@@ -99,7 +99,9 @@ Memproses...
 
 <script>
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx484LCsPtGi5KAJb2lDFAnNGjReFAfKsCk0U3OK77poBNW1vrbG6w_k2Na7AjbH1SM/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrF84cO36sAvdpiACrIhWuGxoAodtkHLx1atTQy65J-oEGFlRx5TlRltzIrY2NSPWf/exec";
+
+let isSubmitting = false; // 🔒 ANTI DOUBLE SUBMIT
 
 /* =========================
    LOAD MATERI
@@ -187,7 +189,7 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 
 /* =========================
-   SUBMIT + LOADING OVERLAY
+   SUBMIT + LOADING OVERLAY + LOCK
 ========================= */
 
 document.getElementById("attendanceForm")
@@ -195,12 +197,23 @@ document.getElementById("attendanceForm")
 
 e.preventDefault();
 
+// 🔒 CEGAH DOUBLE CLICK
+if(isSubmitting) return;
+isSubmitting = true;
+
 if(canvas.toDataURL().length<200){
 alert("Tanda tangan wajib diisi");
+isSubmitting = false;
 return;
 }
 
-document.getElementById("loadingOverlay").classList.remove("hidden");
+const overlay = document.getElementById("loadingOverlay");
+overlay.classList.remove("hidden");
+
+// Disable tombol
+const submitBtn = this.querySelector("button[type='submit']");
+submitBtn.disabled = true;
+submitBtn.classList.add("opacity-50","cursor-not-allowed");
 
 const formData=new URLSearchParams();
 
@@ -219,7 +232,7 @@ fetch(WEB_APP_URL,{method:"POST",body:formData})
 .then(res=>res.json())
 .then(r=>{
 
-document.getElementById("loadingOverlay").classList.add("hidden");
+overlay.classList.add("hidden");
 
 if(r.status==="success"){
 alert("Berhasil disimpan");
@@ -229,10 +242,21 @@ clearSignature();
 alert(r.message);
 }
 
+// 🔓 BUKA KUNCI
+isSubmitting = false;
+submitBtn.disabled = false;
+submitBtn.classList.remove("opacity-50","cursor-not-allowed");
+
 })
 .catch(()=>{
-document.getElementById("loadingOverlay").classList.add("hidden");
+overlay.classList.add("hidden");
 alert("Terjadi kesalahan koneksi");
+
+// 🔓 BUKA KUNCI
+isSubmitting = false;
+submitBtn.disabled = false;
+submitBtn.classList.remove("opacity-50","cursor-not-allowed");
+
 });
 
 });
